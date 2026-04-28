@@ -717,15 +717,21 @@ app.get("/usage", Middleware, async (req, res) => {
 });
 
 
-const server = app.listen(port, () => {
-    console.log(`Backend listening on http://localhost:${port}`);
-});
+// Export for Vercel serverless
+export default app;
 
-server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-        console.error(`Port ${port} is already in use.`);
-    } else {
-        console.error("Failed to start server:", err.message);
-    }
-    process.exit(1);
-});
+// Only start the server when running locally (not on Vercel)
+if (!process.env.VERCEL) {
+    const server = app.listen(port, () => {
+        console.log(`Backend listening on http://localhost:${port}`);
+    });
+
+    server.on("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE") {
+            console.error(`Port ${port} is already in use.`);
+        } else {
+            console.error("Failed to start server:", err.message);
+        }
+        process.exit(1);
+    });
+}
