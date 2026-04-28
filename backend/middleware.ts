@@ -8,13 +8,10 @@ export async function Middleware(req: Request, res: Response, next: NextFunction
     const userId = data.data.user?.id;
     if (userId){
         try {
-            console.log ({
-                    id : data.data.user?.id!,
-                    supabaseId : data.data.user?.id!,
-                    email: data.data.user?.email!,
-                    provider : data.data.user?.app_metadata.provider === "google" ? "Google" : "Github",
-                    name : data.data.user?.user_metadata.full_name,
-            });
+            // Debug logging (development only)
+            if (process.env.NODE_ENV !== "production") {
+                console.log("Auth:", data.data.user?.email);
+            }
             const dbUser = await prisma.user.upsert({
                 where: { email: data.data.user?.email! },
                 update: {
