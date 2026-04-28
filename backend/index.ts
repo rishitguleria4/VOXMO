@@ -177,7 +177,7 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
 app.use(express.json({ limit: '50mb' }));
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
+        origin: "http://localhost:3000",
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
@@ -717,21 +717,15 @@ app.get("/usage", Middleware, async (req, res) => {
 });
 
 
-// Export for Vercel serverless
-export default app;
+const server = app.listen(port, () => {
+    console.log(`Backend listening on http://localhost:${port}`);
+});
 
-// Only start the server when running locally (not on Vercel)
-if (!process.env.VERCEL) {
-    const server = app.listen(port, () => {
-        console.log(`Backend listening on http://localhost:${port}`);
-    });
-
-    server.on("error", (err: NodeJS.ErrnoException) => {
-        if (err.code === "EADDRINUSE") {
-            console.error(`Port ${port} is already in use.`);
-        } else {
-            console.error("Failed to start server:", err.message);
-        }
-        process.exit(1);
-    });
-}
+server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+        console.error(`Port ${port} is already in use.`);
+    } else {
+        console.error("Failed to start server:", err.message);
+    }
+    process.exit(1);
+});
