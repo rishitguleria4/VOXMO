@@ -196,10 +196,14 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     res.json({ received: true });
 });
 
+const frontendUrl = process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL.replace(/\/$/, "") 
+    : "http://localhost:3000";
+
 app.use(express.json({ limit: '10mb' }));
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL : "http://localhost:3000",
+        origin: frontendUrl,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
