@@ -5,10 +5,12 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot index.ts",
-    "start": "bun index.ts"
+    "start": "bun index.ts",
+    "postinstall": "prisma generate"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/express": "^5.0.0",
     "@types/pg": "^8.20.0"
   },
   "peerDependencies": {
