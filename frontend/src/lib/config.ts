@@ -1,7 +1,7 @@
 let url = "http://localhost:3002";
 try {
-    // Bun.build will statically replace this in production
-    url = process.env.BACKEND_URL || "http://localhost:3002";
+    // Vite statically replaces import.meta.env variables during build time.
+    url = import.meta.env.VITE_BACKEND_URL || "http://localhost:3002";
 } catch (e) {
     // Ignore ReferenceError in browser during dev
 }

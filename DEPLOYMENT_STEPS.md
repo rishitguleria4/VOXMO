@@ -44,11 +44,11 @@ Your current frontend is blank because Vercel doesn't know it outputs to `dist`.
    - **Output Directory:** Leave blank or default (it will use `dist`).
    - **Install Command:** Leave blank or default.
 5. **Environment Variables:** Add these:
-   - `BUN_PUBLIC_SUPABASE_URL` = `https://ilekzlddytmxmvejeysw.supabase.co`
-   - `BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = `sb_publishable_...`
-   - `BUN_PUBLIC_VAPI_PUBLIC_KEY` = `693fc13c-...`
-   - `BUN_PUBLIC_VAPI_ASSISTANT_ID` = `b3eb9374-...`
-   - `BACKEND_URL` = Paste the URL you got from Step 1 (e.g., `https://voxmo-backend.vercel.app`)
+   - `VITE_SUPABASE_URL` = `https://ilekzlddytmxmveeysw.supabase.co`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` = `sb_publishable_...`
+   - `VITE_VAPI_PUBLIC_KEY` = `693fc13c-...`
+   - `VITE_VAPI_ASSISTANT_ID` = `b3eb9374-...`
+   - `VITE_BACKEND_URL` = Paste the URL you got from Step 1 (e.g., `https://voxmo-backend.vercel.app`)
 6. Click **Deploy**.
 
 ---

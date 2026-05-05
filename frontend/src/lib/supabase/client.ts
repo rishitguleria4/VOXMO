@@ -2,7 +2,8 @@ import { createBrowserClient } from "@supabase/ssr";
 
 export function createClient (){
   return createBrowserClient(
-    process.env.BUN_PUBLIC_SUPABASE_URL!,
-    process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    // Vite uses import.meta.env for client-side variables prefixed with VITE_
+    import.meta.env.VITE_SUPABASE_URL!,
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
   )
 }

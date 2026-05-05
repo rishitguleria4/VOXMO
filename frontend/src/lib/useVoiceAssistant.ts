@@ -99,9 +99,10 @@ export function useVoiceAssistant() {
         } else {
             let assistantId = "your-vapi-assistant-id";
             try {
-                assistantId = process.env.BUN_PUBLIC_VAPI_ASSISTANT_ID || process.env.VAPI_ASSISTANT_ID || process.env.VITE_VAPI_ASSISTANT_ID || "your-vapi-assistant-id";
+                // Vite uses import.meta.env for client-side environment variables prefixed with VITE_
+                assistantId = import.meta.env.VITE_VAPI_ASSISTANT_ID || "your-vapi-assistant-id";
             } catch (e) {
-                // Ignore ReferenceError in browser during dev
+                // Ignore ReferenceError
             }
             if (!assistantId || assistantId === "your-vapi-assistant-id") {
                 console.error("Vapi Assistant ID is missing. Please add it to your .env.local file.");
