@@ -144,7 +144,7 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     const sig = req.headers["stripe-signature"] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    let event: Stripe.Event;
+    let event: any;
 
     try {
         if (!webhookSecret) {
@@ -160,7 +160,7 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     }
 
     if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object as any;
         const userId = session.metadata?.userId;
         const credits = parseInt(session.metadata?.credits || "0", 10);
         const sessionId = session.id;
