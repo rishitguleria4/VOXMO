@@ -62,6 +62,26 @@
   overflow: hidden;
 }
 
+@layer utilities {
+  @keyframes mic-glow {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
+  .animate-mic-glow {
+    animation: mic-glow 2s infinite;
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+}
+
 @media (prefers-reduced-motion) {
   *,
   ::before,

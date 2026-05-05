@@ -6,6 +6,7 @@ import SearchInput from "../components/SearchInput";
 import AnswerCard from "../components/AnswerCard";
 import CreditGuard from "../components/CreditGuard";
 import { Search, Zap, Globe, Sparkles, TrendingUp } from "lucide-react";
+import { useState } from "react";
 
 const SUGGESTED_QUERIES = [
     "What are the latest breakthroughs in AI?",
@@ -29,8 +30,7 @@ export default function SearchPage() {
     const { models, selectedModel, selectModel } = useModelSelection();
     const scrollRef = useRef<HTMLDivElement>(null);
     const greeting = useMemo(getGreeting, []);
-
-    // Auto-scroll to bottom when new results come in
+    // Auto-scroll
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTo({
@@ -47,7 +47,8 @@ export default function SearchPage() {
     };
 
     return (
-        <div className="h-screen flex flex-col">
+        <div className="h-screen flex flex-col relative">
+
             {/* Scrollable results area */}
             <div
                 ref={scrollRef}

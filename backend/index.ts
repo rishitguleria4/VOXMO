@@ -8,6 +8,7 @@ import { prisma } from "./db";
 import { Middleware } from "./middleware";
 import cors from "cors";
 import Stripe from "stripe";
+import rateLimit from "express-rate-limit";
 
 const client = tavily({ apiKey: process.env.TAVILY_API_KEY });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -24,6 +25,8 @@ interface ModelConfig {
     description: string;
     tier: "flagship" | "fast" | "search";
     resolve: () => string;
+    maxTokens?: number;
+    providerOptions?: Record<string, any>;
 }
 
 const MODEL_REGISTRY: Record<string, ModelConfig> = {
@@ -51,21 +54,35 @@ const MODEL_REGISTRY: Record<string, ModelConfig> = {
         tier: "fast",
         resolve: () => "openai/gpt-4o-mini",
     },
-    "gpt-4o": {
-        id: "gpt-4o",
-        name: "GPT-4o",
+    "gpt-4.0": {
+        id: "gpt-4.0",
+        name: "GPT-4.0",
         provider: "OpenAI",
         description: "Most capable flagship model",
         tier: "flagship",
-        resolve: () => "openai/gpt-4o",
+        resolve: () => "openai/gpt-4.0",
+        maxTokens: 131072,
+        providerOptions: {
+            openai: {
+                reasoningEffort: "high",
+                reasoningSummary: "detailed",
+            },
+        },
     },
-    "claude-3-5-sonnet": {
-        id: "claude-3-5-sonnet",
-        name: "Claude 3.5 Sonnet",
+    "claude-sonnet-3.7": {
+        id: "claude-sonnet-3.7",
+        name: "Claude Sonnet 3.7",
         provider: "Anthropic",
         description: "Top-tier coding and reasoning",
         tier: "flagship",
-        resolve: () => "anthropic/claude-3-5-sonnet-latest",
+        resolve: () => "anthropic/claude-sonnet-3.7",
+        maxTokens: 262144,
+        providerOptions: {
+            anthropic: {
+                thinking: { type: "adaptive" },
+                effort: "high",
+            },
+        },
     },
     "claude-3-5-haiku": {
         id: "claude-3-5-haiku",
@@ -93,7 +110,7 @@ const MODEL_REGISTRY: Record<string, ModelConfig> = {
     },
     "mistral-large": {
         id: "mistral-large",
-        name: "Mistral Small",
+        name: "Mistral Large",
         provider: "Mistral",
         description: "Fast European model",
         tier: "fast",
@@ -104,16 +121,21 @@ const MODEL_REGISTRY: Record<string, ModelConfig> = {
         name: "Grok 3",
         provider: "xAI",
         description: "xAI's most powerful model",
-        tier: "flagship",
+        tier: "flagship",//
         resolve: () => "xai/grok-3",
     },
 };
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
 
-function resolveModel(modelId?: string): { model: string; tier: string } {
+function resolveModel(modelId?: string): { model: string; tier: string; maxTokens?: number; providerOptions?: Record<string, any> } {
     const config = MODEL_REGISTRY[modelId || DEFAULT_MODEL] || MODEL_REGISTRY[DEFAULT_MODEL];
-    return { model: config!.resolve(), tier: config!.tier };
+    return {
+        model: config!.resolve(),
+        tier: config!.tier,
+        maxTokens: config!.maxTokens,
+        providerOptions: config!.providerOptions,
+    };
 }
 
 // Stripe: Webhook to handle successful payments
@@ -174,16 +196,26 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     res.json({ received: true });
 });
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(
     cors({
-        origin: "http://localhost:3000",
+        origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL : "http://localhost:3000",
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
     })
 );
 app.options(/.*/, cors());
+
+// Apply rate limiting to all endpoints below this line
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 100, // Limit each IP to 100 requests per `window`
+    standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { error: "Too many requests from this IP, please try again after 15 minutes." }
+});
+app.use(apiLimiter);
 
 // ─── Model listing endpoint ───
 app.get("/models", (_req, res) => {
@@ -279,6 +311,11 @@ app.post("/perplexity_ask", Middleware, async (req, res) => {
         return;
     }
 
+    if (query.length > 100000) {
+        res.status(400).json({ error: "Query exceeds maximum allowed length" });
+        return;
+    }
+
     // Check credits
     const user = await prisma.user.findUnique({ where: { id: req.userId! } });
     if (!user || user.credits <= 0) {
@@ -313,8 +350,9 @@ app.post("/perplexity_ask", Middleware, async (req, res) => {
             }
         });
 
-        // Web search
-        const webSearchResponse = await client.search(query, {
+        // Web search — Tavily enforces a 400-char max query, so truncate for the search
+        const searchQuery = query.length > 400 ? query.substring(0, 400) : query;
+        const webSearchResponse = await client.search(searchQuery, {
             searchDepth: "advanced",
         });
         const webSearchResults = webSearchResponse.results;
@@ -324,7 +362,7 @@ app.post("/perplexity_ask", Middleware, async (req, res) => {
             .replace("{{WEB_SEARCH_RESULTS}}", JSON.stringify(webSearchResults))
             .replace("{{USER_QUERY}}", query);
 
-        const { model, tier } = resolveModel(modelId);
+        const { model, tier, maxTokens, providerOptions } = resolveModel(modelId);
 
         const messages: any[] = [
             {
@@ -347,6 +385,8 @@ app.post("/perplexity_ask", Middleware, async (req, res) => {
             model,
             messages,
             system: SYSTEM_PROMPTS[tier] || SYSTEM_PROMPTS.fast,
+            ...(maxTokens ? { maxTokens } : {}),
+            ...(providerOptions ? { providerOptions } : {}),
         });
 
         let fullResponse = "";
@@ -380,7 +420,7 @@ app.post("/perplexity_ask", Middleware, async (req, res) => {
         await prisma.user.update({
             where: { id: req.userId! },
             data: { credits: { increment: 1 } }
-        }).catch(() => {}); // Don't fail if restoration fails
+        }).catch(() => { }); // Don't fail if restoration fails
 
         if (!res.headersSent) {
             res.status(500).json({ error: "Search failed. Please try again." });
@@ -399,6 +439,11 @@ app.post("/conversation/:conversationId/continue", Middleware, async (req, res) 
 
     if (typeof query !== "string" || query.trim().length === 0) {
         res.status(400).json({ error: "query is required" });
+        return;
+    }
+
+    if (query.length > 100000) {
+        res.status(400).json({ error: "Query exceeds maximum allowed length" });
         return;
     }
 
@@ -432,27 +477,29 @@ app.post("/conversation/:conversationId/continue", Middleware, async (req, res) 
             data: { content: query, role: "User", conversationId }
         });
 
-        // Web search
-        const webSearchResponse = await client.search(query, { searchDepth: "advanced" });
+        // Web search — Tavily enforces a 400-char max query, so truncate for the search
+        const searchQuery = query.length > 400 ? query.substring(0, 400) : query;
+        const webSearchResponse = await client.search(searchQuery, { searchDepth: "advanced" });
         const webSearchResults = webSearchResponse.results;
 
-        // Build prompt with conversation history context
-        const historyContext = conversation.messages
-            .slice(-6) // Last 6 messages for context
-            .map(m => `${m.role}: ${m.content.substring(0, 500)}`)
-            .join("\n\n");
+        // Map previous messages to native AI SDK format
+        const previousMessages = conversation.messages.map(m => ({
+            role: m.role.toLowerCase() as "user" | "assistant",
+            content: m.content
+        }));
 
         const prompt = PROMPT_TEMPLATE
             .replace("{{WEB_SEARCH_RESULTS}}", JSON.stringify(webSearchResults))
             .replace("{{USER_QUERY}}", query);
 
-        const { model, tier } = resolveModel(modelId);
+        const { model, tier, maxTokens, providerOptions } = resolveModel(modelId);
 
         const messages: any[] = [
+            ...previousMessages,
             {
                 role: 'user',
                 content: [
-                    { type: 'text', text: `Previous conversation context:\n${historyContext}\n\n---\n\n${prompt}` },
+                    { type: 'text', text: prompt },
                     ...(files || []).map((f) => {
                         const base64Data = f.data.replace(/^data:[^;]+;base64,/, "");
                         if (f.mimeType.startsWith("image/")) {
@@ -469,6 +516,8 @@ app.post("/conversation/:conversationId/continue", Middleware, async (req, res) 
             model,
             messages,
             system: SYSTEM_PROMPTS[tier] || SYSTEM_PROMPTS.fast,
+            ...(maxTokens ? { maxTokens } : {}),
+            ...(providerOptions ? { providerOptions } : {}),
         });
 
         let fullResponse = "";
@@ -496,7 +545,7 @@ app.post("/conversation/:conversationId/continue", Middleware, async (req, res) 
         await prisma.user.update({
             where: { id: req.userId! },
             data: { credits: { increment: 1 } }
-        }).catch(() => {});
+        }).catch(() => { });
 
         if (!res.headersSent) {
             res.status(500).json({ error: "Search failed. Please try again." });
@@ -513,6 +562,12 @@ app.post("/perplexity_follow_up_questions", Middleware, async (req, res) => {
 
     if (typeof query !== "string" || query.trim().length === 0) {
         res.status(400).json({ error: "query is required" });
+        return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+    if (!user || user.credits <= 0) {
+        res.status(403).json({ error: "Insufficient credits to generate follow-ups" });
         return;
     }
 
@@ -579,8 +634,8 @@ app.post("/create-checkout-session", Middleware, async (req, res) => {
                 },
             ],
             mode: "payment",
-            success_url: "http://localhost:3000/payment/success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url: "http://localhost:3000/payment/cancel",
+            success_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment/cancel`,
             metadata: {
                 userId: req.userId!,
                 credits: credits,
@@ -658,6 +713,98 @@ app.post("/verify-payment", Middleware, async (req, res) => {
     }
 });
 
+// Deduct voice call credits
+app.post("/deduct-voice-credits", Middleware, async (req, res) => {
+    try {
+        const { durationSeconds } = req.body;
+        
+        if (typeof durationSeconds !== 'number' || durationSeconds < 0) {
+            res.status(400).json({ error: "Invalid duration" });
+            return;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId }
+        });
+
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        // Calculate credits to deduct (10 credits per minute, rounded up)
+        const creditsToDeduct = Math.ceil(durationSeconds / 60) * 10;
+
+        if (creditsToDeduct > 0) {
+            const updatedUser = await prisma.user.update({
+                where: { id: req.userId },
+                data: { credits: { decrement: creditsToDeduct } }
+            });
+            console.log(`🎙️ Deducted ${creditsToDeduct} credits for voice call (${durationSeconds}s) from user ${req.userId}`);
+            res.json({ success: true, credits: updatedUser.credits, deducted: creditsToDeduct });
+        } else {
+            res.json({ success: true, credits: user.credits, deducted: 0 });
+        }
+
+    } catch (e) {
+        console.error("Deduct Voice Credits Error:", e);
+        res.status(500).json({ error: "Failed to deduct credits" });
+    }
+});
+
+// Save voice conversation
+app.post("/save-voice-conversation", Middleware, async (req, res) => {
+    try {
+        const { messages } = req.body;
+        
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            res.status(400).json({ error: "Invalid messages array" });
+            return;
+        }
+
+        // Filter out system messages to avoid leaking prompts
+        const validMessages = messages.filter(m => {
+            const r = (m.role || "").toLowerCase();
+            return r === 'user' || r === 'assistant' || r === 'bot' || r === 'model';
+        });
+
+        if (validMessages.length === 0) {
+            res.json({ success: true, conversationId: null, message: "No valid messages to save" });
+            return;
+        }
+
+        // Create a title from the first User message or default
+        const firstUserMessage = validMessages.find(m => (m.role || "").toLowerCase() === 'user') || validMessages[0];
+        const rawTitle = firstUserMessage.content || "Voice Conversation";
+        const title = "Voice Chat: " + (rawTitle.length > 40 ? rawTitle.substring(0, 37) + "..." : rawTitle);
+        const slug = "voice-chat-" + Date.now() + "-" + Math.random().toString(36).substring(2, 7);
+
+        const conversation = await prisma.conversation.create({
+            data: {
+                title,
+                slug,
+                userId: req.userId!,
+                messages: {
+                    create: validMessages.map(m => {
+                        const r = (m.role || "").toLowerCase();
+                        const isAssistant = r === 'assistant' || r === 'bot' || r === 'model';
+                        return {
+                            content: m.content || "...",
+                            role: isAssistant ? 'Assistant' : 'User',
+                        };
+                    })
+                }
+            }
+        });
+
+        console.log(`🎙️ Saved Voice Conversation ${conversation.id} for user ${req.userId}`);
+        res.json({ success: true, conversationId: conversation.id });
+    } catch (e) {
+        console.error("Save Voice Conversation Error:", e);
+        res.status(500).json({ error: "Failed to save voice conversation" });
+    }
+});
+
 // Get user's current credit balance
 app.get("/credits", Middleware, async (req, res) => {
     try {
@@ -717,15 +864,19 @@ app.get("/usage", Middleware, async (req, res) => {
 });
 
 
-const server = app.listen(port, () => {
-    console.log(`Backend listening on http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== "production") {
+    const server = app.listen(port, () => {
+        console.log(`Backend listening on http://localhost:${port}`);
+    });
 
-server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-        console.error(`Port ${port} is already in use.`);
-    } else {
-        console.error("Failed to start server:", err.message);
-    }
-    process.exit(1);
-});
+    server.on("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE") {
+            console.error(`Port ${port} is already in use.`);
+        } else {
+            console.error("Failed to start server:", err.message);
+        }
+        process.exit(1);
+    });
+}
+
+export default app;

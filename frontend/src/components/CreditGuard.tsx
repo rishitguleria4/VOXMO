@@ -27,10 +27,10 @@ export default function CreditGuard({ children }: CreditGuardProps) {
                         <Sparkles className="w-6 h-6 text-amber-400" />
                     </div>
 
-                    <h2 className="text-xl font-bold text-white mb-2">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                         You're out of credits
                     </h2>
-                    <p className="text-white/40 text-sm mb-6 leading-relaxed">
+                    <p className="text-slate-500 dark:text-white/40 text-sm mb-6 leading-relaxed">
                         Upgrade your plan to continue searching with AI-powered intelligence. 
                         Get instant access to web search and cited answers.
                     </p>
@@ -46,7 +46,7 @@ export default function CreditGuard({ children }: CreditGuardProps) {
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </button>
 
-                    <p className="text-white/20 text-xs mt-4">
+                    <p className="text-slate-400 dark:text-white/20 text-xs mt-4">
                         Plans start at $19 for 1,000 searches
                     </p>
                 </div>

@@ -15,21 +15,37 @@ export async function Middleware(req: Request, res: Response, next: NextFunction
                     provider : data.data.user?.app_metadata.provider === "google" ? "Google" : "Github",
                     name : data.data.user?.user_metadata.full_name,
             });
-            const dbUser = await prisma.user.upsert({
-                where: { email: data.data.user?.email! },
-                update: {
-                    supabaseId: data.data.user?.id!,
-                    provider: data.data.user?.app_metadata.provider === "google" ? "Google" : "Github",
-                    name: data.data.user?.user_metadata.full_name,
-                },
-                create: {
-                    id: data.data.user?.id!,
-                    supabaseId: data.data.user?.id!,
-                    email: data.data.user?.email!,
-                    provider: data.data.user?.app_metadata.provider === "google" ? "Google" : "Github",
-                    name: data.data.user?.user_metadata.full_name,
-                }
+            let dbUser = await prisma.user.findUnique({
+                where: { id: data.data.user?.id! }
             });
+
+            if (dbUser) {
+                dbUser = await prisma.user.update({
+                    where: { id: data.data.user?.id! },
+                    data: {
+                        email: data.data.user?.email!,
+                        supabaseId: data.data.user?.id!,
+                        provider: data.data.user?.app_metadata.provider === "google" ? "Google" : "Github",
+                        name: data.data.user?.user_metadata.full_name,
+                    }
+                });
+            } else {
+                dbUser = await prisma.user.upsert({
+                    where: { email: data.data.user?.email! },
+                    update: {
+                        supabaseId: data.data.user?.id!,
+                        provider: data.data.user?.app_metadata.provider === "google" ? "Google" : "Github",
+                        name: data.data.user?.user_metadata.full_name,
+                    },
+                    create: {
+                        id: data.data.user?.id!,
+                        supabaseId: data.data.user?.id!,
+                        email: data.data.user?.email!,
+                        provider: data.data.user?.app_metadata.provider === "google" ? "Google" : "Github",
+                        name: data.data.user?.user_metadata.full_name,
+                    }
+                });
+            }
             req.userId = dbUser.id;
         }catch (e){
             console.error("Middleware User Upsert Error:", e);

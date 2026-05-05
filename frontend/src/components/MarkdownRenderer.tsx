@@ -78,6 +78,37 @@ function renderMarkdown(text: string): string {
     // Horizontal rules
     html = html.replace(/^---$/gm, "<hr />");
 
+    // Tables
+    html = html.replace(/(?:^[ \t]*\|.*\|[ \t]*(?:\n|$))+/gm, (match) => {
+        const lines = match.trim().split('\n');
+        if (lines.length < 2) return match;
+        
+        const separatorLine = lines[1].replace(/^[ \t]*\||\|[ \t]*$/g, '').trim();
+        if (!/^[-:| ]+$/.test(separatorLine)) return match;
+        
+        let tableHtml = '<div class="overflow-x-auto"><table>';
+        
+        lines.forEach((line, index) => {
+            if (index === 1) return;
+            
+            const cleanLine = line.replace(/^[ \t]*\||\|[ \t]*$/g, '').trim();
+            const cells = cleanLine.split('|').map(cell => cell.trim());
+            
+            if (index === 0) {
+                tableHtml += '<thead><tr>';
+                cells.forEach(cell => { tableHtml += `<th>${cell}</th>`; });
+                tableHtml += '</tr></thead><tbody>';
+            } else {
+                tableHtml += '<tr>';
+                cells.forEach(cell => { tableHtml += `<td>${cell}</td>`; });
+                tableHtml += '</tr>';
+            }
+        });
+        
+        tableHtml += '</tbody></table></div>\n';
+        return tableHtml;
+    });
+
     // Paragraphs — wrap lines that aren't already wrapped in HTML tags
     html = html.replace(/^(?!<[a-z])((?!<\/)[^\n]+)$/gm, "<p>$1</p>");
 

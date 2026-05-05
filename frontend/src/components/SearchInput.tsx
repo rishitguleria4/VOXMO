@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { ArrowUp, Loader2, Sparkles, Paperclip, X, File as FileIcon } from "lucide-react";
+import { ArrowUp, Loader2, Sparkles, Paperclip, X, File as FileIcon, Mic, MicOff } from "lucide-react";
+import { useVoiceAssistant } from "@/lib/useVoiceAssistant";
 import { useAuth } from "@/lib/AuthContext";
+import { useToast } from "@/components/Toast";
 import ModelSelector from "./ModelSelector";
 
 interface Model {
@@ -42,6 +44,10 @@ export default function SearchInput({
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { credits } = useAuth();
+    const { toast } = useToast();
+    const { isConnecting, isConnected, isAssistantSpeaking, volumeLevel, toggleCall, hasSupport } = useVoiceAssistant();
+
+    const MAX_QUERY_LENGTH = 100000;
 
     const hasCredits = credits === null || credits > 0;
     const isLarge = size === "large";
@@ -64,14 +70,26 @@ export default function SearchInput({
         return () => window.removeEventListener("keydown", handler);
     }, []);
 
-    const handleSubmit = () => {
-        if ((!query.trim() && files.length === 0) || isDisabled || !hasCredits) return;
-        onSubmit(query.trim(), files);
+    const handleSubmit = (overrideQuery?: string) => {
+        const queryToSubmit = overrideQuery ?? query;
+        if ((!queryToSubmit.trim() && files.length === 0) || isDisabled || !hasCredits) return;
+        
+        if (queryToSubmit.length > MAX_QUERY_LENGTH) {
+            toast(`Query is too long. Maximum allowed length is ${MAX_QUERY_LENGTH} characters.`, "error");
+            return;
+        }
+
+        onSubmit(queryToSubmit.trim(), files);
         setQuery("");
         setFiles([]);
         if (inputRef.current) {
             inputRef.current.style.height = "auto";
         }
+    };
+
+    // Vapi replaces the previous startListening/stopListening logic
+    const handleVoiceToggle = () => {
+        toggleCall();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -203,6 +221,47 @@ export default function SearchInput({
                         >
                             <Paperclip className={isLarge ? "w-5 h-5" : "w-4 h-4"} />
                         </button>
+
+                        {hasSupport && (
+                            <button
+                                onClick={handleVoiceToggle}
+                                disabled={isDisabled || (!hasCredits && !isConnected)}
+                                className={`
+                                    flex items-center justify-center rounded-full transition-all relative
+                                    ${isConnecting
+                                        ? "bg-amber-500 text-white animate-pulse shadow-lg shadow-amber-500/20"
+                                        : isConnected 
+                                            ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" 
+                                            : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
+                                    }
+                                    ${isLarge ? "w-10 h-10" : "w-8 h-8"}
+                                `}
+                                style={{
+                                    transform: isConnected && volumeLevel > 0.1 ? `scale(${1 + volumeLevel * 0.1})` : 'scale(1)'
+                                }}
+                                title={isConnecting ? "Connecting..." : isConnected ? "End Call" : "Start Voice Call"}
+                            >
+                                {isConnecting ? (
+                                    <Loader2 className={`animate-spin ${isLarge ? "w-5 h-5" : "w-4 h-4"}`} />
+                                ) : isConnected ? (
+                                    <MicOff className={isLarge ? "w-5 h-5" : "w-4 h-4"} />
+                                ) : (
+                                    <Mic className={isLarge ? "w-5 h-5" : "w-4 h-4"} />
+                                )}
+                                
+                                {/* Dynamic volume ring for Vapi interaction */}
+                                {isConnected && (
+                                    <div 
+                                        className="absolute inset-0 rounded-full bg-indigo-400/30"
+                                        style={{
+                                            transform: `scale(${1 + volumeLevel * 0.5})`,
+                                            opacity: isAssistantSpeaking ? 0.8 : 0.3,
+                                            transition: 'transform 0.1s ease-out, opacity 0.2s ease-in'
+                                        }}
+                                    />
+                                )}
+                            </button>
+                        )}
 
                         {/* Model selector */}
                         {models.length > 0 && onModelSelect && (

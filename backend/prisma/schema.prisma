@@ -1,8 +1,7 @@
 generator client {
-  provider   = "prisma-client"
+  provider   = "prisma-client-js"
   output     = "../generated/prisma"
-  engineType = "client"
-  runtime    = "bun"
+  engineType = "library"
 }
 
 datasource db {
@@ -15,7 +14,7 @@ model User {
   provider      AuthProvider
   name          String
   supabaseId    String?
-  credits       Int            @default(50)
+  credits       Int            @default(2)
   conversations Conversation[]
 }
 
