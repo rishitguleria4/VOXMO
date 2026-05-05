@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { defineConfig } from "prisma/config";
 
-const envPath = join(import.meta.dirname, ".env");
+const envPath = join(process.cwd(), ".env");
 
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
