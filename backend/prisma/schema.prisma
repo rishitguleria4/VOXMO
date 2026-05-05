@@ -13,7 +13,7 @@ model User {
   provider      AuthProvider
   name          String
   supabaseId    String?
-  credits       Int            @default(2)
+  credits       Int            @default(12)
   conversations Conversation[]
 }
 

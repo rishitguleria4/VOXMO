@@ -10,7 +10,7 @@ export function useVoiceAssistant() {
     const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
     const [volumeLevel, setVolumeLevel] = useState(0);
     
-    const { jwt, refreshCredits, refreshConversations } = useAuth();
+    const { jwt, credits, refreshCredits, refreshConversations } = useAuth();
     
     const startTimeRef = useRef<number | null>(null);
     const messagesRef = useRef<any[]>([]);
@@ -97,6 +97,11 @@ export function useVoiceAssistant() {
         if (isConnected || isConnecting) {
             vapi.stop();
         } else {
+            if (credits === null || credits < 10) {
+                alert("You need at least 10 credits to use the voice assistant.");
+                return;
+            }
+
             let assistantId = "your-vapi-assistant-id";
             try {
                 // Vite uses import.meta.env for client-side environment variables prefixed with VITE_
@@ -118,7 +123,7 @@ export function useVoiceAssistant() {
                 setIsConnecting(false);
             }
         }
-    }, [isConnected, isConnecting]);
+    }, [isConnected, isConnecting, credits]);
 
     return {
         isConnecting,
