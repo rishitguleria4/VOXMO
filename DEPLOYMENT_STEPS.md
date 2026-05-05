@@ -38,11 +38,11 @@ Your current frontend is blank because Vercel doesn't know it outputs to `dist`.
 3. In the "Configure Project" screen:
    - **Project Name:** `voxmo-web`
    - **Root Directory:** Click **Edit** and select `frontend`.
-4. **Build and Output Settings** (THIS FIXES THE BLANK SCREEN):
-   - **Framework Preset:** `Other`
-   - **Build Command:** `bun run build.ts`
-   - **Output Directory:** `dist` 
-   - **Install Command:** `bun install`
+4. **Build and Output Settings** (Vercel will auto-detect Vite!):
+   - **Framework Preset:** `Vite` (Vercel should auto-select this. If not, select Vite).
+   - **Build Command:** Leave blank or default (it will use `npm run build` or `vite build`).
+   - **Output Directory:** Leave blank or default (it will use `dist`).
+   - **Install Command:** Leave blank or default.
 5. **Environment Variables:** Add these:
    - `BUN_PUBLIC_SUPABASE_URL` = `https://ilekzlddytmxmvejeysw.supabase.co`
    - `BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = `sb_publishable_...`
