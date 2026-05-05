@@ -15,17 +15,38 @@ export function useVoiceAssistant() {
     const startTimeRef = useRef<number | null>(null);
     const messagesRef = useRef<any[]>([]);
 
+    const creditsRef = useRef(credits);
+    useEffect(() => {
+        creditsRef.current = credits;
+    }, [credits]);
+
     useEffect(() => {
         if (!vapi) return;
+
+        let intervalId: NodeJS.Timeout;
 
         const onCallStart = () => {
             setIsConnecting(false);
             setIsConnected(true);
             startTimeRef.current = Date.now();
             messagesRef.current = [];
+
+            // Real-time credit check
+            intervalId = setInterval(() => {
+                if (startTimeRef.current && creditsRef.current !== null) {
+                    const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+                    const creditsToDeduct = Math.ceil(elapsedSeconds / 60) * 10;
+                    
+                    if (creditsRef.current - creditsToDeduct <= 0) {
+                        console.warn("Credits exhausted during call. Stopping assistant.");
+                        vapi.stop();
+                    }
+                }
+            }, 1000);
         };
 
         const onCallEnd = async () => {
+            if (intervalId) clearInterval(intervalId);
             setIsConnecting(false);
             setIsConnected(false);
             setIsAssistantSpeaking(false);
