@@ -63,3 +63,24 @@ Now that both are live:
    - Value: `https://voxmo-web.vercel.app` (Or whatever your new frontend URL is).
    - Ensure all three boxes (Production, Preview, Development) are checked. Do not create a new environment.
 4. Go to **Deployments** for the backend, click the three dots next to the latest deployment, and click **Redeploy**.
+
+---
+
+## 4. Final Step: Configure Stripe Webhook
+
+To ensure users receive credits after a successful payment, you must connect Stripe to your backend.
+
+1. Go to your [Stripe Webhooks Dashboard](https://dashboard.stripe.com/test/webhooks).
+2. Click **Add an endpoint**.
+3. **Endpoint URL:** Paste your backend URL followed by `/webhook/stripe`.
+   *   Example: `https://voxmo.vercel.app/webhook/stripe`
+4. Click **+ Select events** and search for/check: `checkout.session.completed`.
+5. Click **Add endpoint**.
+6. Under the "Signing secret" section, click **Reveal**. Copy the secret (it starts with `whsec_...`).
+7. Go to your **Backend** project in Vercel -> Settings -> Environment Variables.
+8. Add a new variable:
+   - Name: `STRIPE_WEBHOOK_SECRET`
+   - Value: Paste the `whsec_...` secret you just copied.
+9. Go to **Deployments** for the backend and click **Redeploy** to apply the change.
+
+Your payments will now automatically sync credits to the database!
