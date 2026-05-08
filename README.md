@@ -1,6 +1,6 @@
 # 🔍 Voxmo — AI-Powered Search Engine
 
-**Live Demo:** [https://voxmo-web.vercel.app](https://voxmo-web.vercel.app)
+**Live Demo:** [https://voxmo.rishitguleria.me](https://voxmo-web.vercel.app)
 
 > [!WARNING]
 > **Stripe Webhook (Sandbox Mode):** The payment system is currently in Stripe Test Mode. For security and to prevent credit abuse with dummy cards, the webhook that syncs credits is intentionally disabled in this environment. You can test the checkout flow using Stripe's test cards, but **no real charges will occur, and no credits will be added to your account.** All search, voice, and AI features are otherwise fully functional.
