@@ -203,7 +203,11 @@ const frontendUrl = process.env.FRONTEND_URL
 app.use(express.json({ limit: '10mb' }));
 app.use(
     cors({
-        origin: frontendUrl,
+        origin: [
+            "https://voxmo.rishitguleria.me",
+            "https://voxmo-web.vercel.app",
+            frontendUrl
+        ],
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
