@@ -75,7 +75,7 @@ const MODEL_REGISTRY: Record<string, ModelConfig> = {
         provider: "Anthropic",
         description: "Top-tier coding and reasoning",
         tier: "flagship",
-        resolve: () => "anthropic/claude-sonnet-3.7",
+        resolve: () => "anthropic/claude-3-7-sonnet-20250219",
         maxTokens: 262144,
         providerOptions: {
             anthropic: {
@@ -90,7 +90,7 @@ const MODEL_REGISTRY: Record<string, ModelConfig> = {
         provider: "Anthropic",
         description: "Fastest Claude model",
         tier: "fast",
-        resolve: () => "anthropic/claude-3-5-haiku-latest",
+        resolve: () => "anthropic/claude-3-5-haiku-20241022",
     },
     "sonar-large": {
         id: "sonar-large",
