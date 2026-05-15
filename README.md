@@ -8,7 +8,7 @@
 **Voxmo** is a full-stack, AI-powered search engine that delivers real-time, cited answers by combining web search with large language models. Think of it as your own self-hosted Perplexity AI — with multi-model support, streaming responses, conversation history, and a credit-based payment system.
 
 ---
-> [!BUGS]
+> [BUGS]
 **CLAUDE , GPT MODELS AND SEND BUTTON HAVE SOME BUGS ( USE ENTER TO SEND MESSAGES AND USE OTHER MODELS TO TEST OUT )**
 ## ✨ Features
 
