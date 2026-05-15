@@ -6,7 +6,8 @@
 > **Stripe Webhook (Sandbox Mode):** The payment system is currently in Stripe Test Mode. For security and to prevent credit abuse with dummy cards, the webhook that syncs credits is intentionally disabled in this environment. You can test the checkout flow using Stripe's test cards, but **no real charges will occur, and no credits will be added to your account.** All search, voice, and AI features are otherwise fully functional.
 
 **Voxmo** is a full-stack, AI-powered search engine that delivers real-time, cited answers by combining web search with large language models. Think of it as your own self-hosted Perplexity AI — with multi-model support, streaming responses, conversation history, and a credit-based payment system.
-
+[!BUGS]
+CLAUDE , GPT MODELS AND SEND BUTTON HAVE SOME BUGS ( USE ENTER TO SEND MESSAGES AND USE OTHER MODELS TO TEST OUT )
 ---
 
 ## ✨ Features
